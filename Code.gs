@@ -9,7 +9,6 @@ function onOpen() {
       .addToUi();
 }
 
-
 function openDatePicker() {
   var html = HtmlService.createTemplateFromFile('Date_Picker').evaluate().setHeight(300).setWidth(300);
   SpreadsheetApp.getUi().showModalDialog(html, "Please select the feedback date.");
@@ -35,12 +34,10 @@ function viewFeedback() {
   SpreadsheetApp.getUi().showModalDialog(html, "Submitted Feedback")
 }
 
-
 function prFeedback(date) {
   //Opens the feedback sidebar
   
   date = new Date(date)
-  var day = date.getDate()
   var month = date.getMonth()
   
   var months = {0: "January", 
@@ -59,49 +56,30 @@ function prFeedback(date) {
   var users = getUsers();
   var user =  users[Session.getActiveUser().getEmail()];
 
-  var extracted_data = getCases(user, month);
-  var all_cases = extracted_data[0]
-  var week_indexes = extracted_data[1]
-  if (all_cases == false) {
-    SpreadsheetApp.getUi().alert("You have no cases assigned for this month.", SpreadsheetApp.getUi().ButtonSet.OK);
-  }  
+  var extracted_data = getCases(user, date);
+  if (extracted_data) {
+    var cases = extracted_data[0];
+    var word_count = extracted_data[1];
+    var year = SpreadsheetApp.getActiveSpreadsheet().getName().split(" ")[2].slice(2, 4);
+    
+    var html = HtmlService.createTemplateFromFile('Index');
+    html.cases = cases;
+    html.user_word_count = word_count
+    html.user = user;
+    html.month_year = "-" + pad(month+1) + "-" + year;
+    html.month = months[month]
+    html.date = date
+    html = html.evaluate().setTitle("Proofreading Feedback");
+    SpreadsheetApp.getUi().showSidebar(html);
+  }
   else {
-    var cases = all_cases[day]
-    if (cases == undefined) {
-      SpreadsheetApp.getUi().alert("You have no cases assigned for this day.", SpreadsheetApp.getUi().ButtonSet.OK);
-    }
-    else {
-      var year = SpreadsheetApp.getActiveSpreadsheet().getName().split(" ")[2].slice(2, 4);
-      
-      //Get 8H word count for the user
-      var week_no = getWeekNo(date)
-      var word_counts = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(months[month]).getRange(week_indexes[week_no - 1] + 2, 2, week_indexes[week_no] - week_indexes[week_no - 1], 2).getValues();
-      word_counts = [].concat.apply([], word_counts);
-      var user_word_count = word_counts[word_counts.indexOf(user) + 1]
-      
-      var html = HtmlService.createTemplateFromFile('Index');
-      html.cases = cases;
-      html.user_word_count = user_word_count
-      html.all_cases = all_cases;
-      html.user = user;
-      html.month_year = "-" + pad(month+1) + "-" + year;
-      html.month = months[month]
-      html.date = date
-      //html.editors = editors
-      html = html.evaluate().setTitle("Proofreading Feedback");
-      SpreadsheetApp.getUi().showSidebar(html);
-    }
+    SpreadsheetApp.getUi().alert("You have no cases assigned for this day.", SpreadsheetApp.getUi().ButtonSet.OK);
   }
 }
 
-
-function getCases(user, month) {
-  //Searches the case ID columns of the active month sheet.
-  //Returns an array of the case IDs for the specified proofreader (user)
-
-  var today = new Date();
-  var today_date = today.getDate();
-  var today_month = today.getMonth();
+function getCases(user, date) {
+  //Searches the case ID columns of the month sheet for the chosen date.
+  //Returns an array of the case IDs and editors for the specified proofreader (user)
    
   var months = {0: "January", 
                 1: "Februay",
@@ -114,14 +92,13 @@ function getCases(user, month) {
                 8: "September",
                 9: "October",
                 10: "November",
-                11: "December"}  
-  
+                11: "December"};
   
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var month_sheet = ss.getSheetByName(months[month]);
+  var month_sheet = ss.getSheetByName(months[date.getMonth()]);
   
   var cases = [];
-  var num_rows = month_sheet.getMaxRows();
+  var word_counts = [];
   
   //Find the start row for each week in the schedule sheet
   var week_indexes = []
@@ -134,123 +111,64 @@ function getCases(user, month) {
   }
   week_indexes.push(sheet_height)
   
+  //Loop over days and week indexes
+  //Use quotient (Math.floor) and remainder (%) on division by 7 to index rows and columns
+  //Add cases and word counts for the selected date
+  var found = false;
+  var i = 0;
+  while ((found == false)&&(i < 41)) {
+    var week = Math.floor(i / 7);
+    var column = (7 * (i % 7)) + 5;
+    if (month_sheet.getRange(week_indexes[week] + 1, column, 1, 1).getValues()[0][0] == date.getDate()) {
+      found = true
+      cases = cases.concat(month_sheet.getRange(week_indexes[week] + 1, column, week_indexes[week+1] - week_indexes[week], 4).getValues());
+      word_counts = word_counts.concat(month_sheet.getRange(week_indexes[week] + 1, 2, week_indexes[week + 1] - week_indexes[week], 2).getValues());
+    }
+    i += 1;
+  }
   
-  for (var i = 0; i < week_indexes.length - 1; i++) {
-    for (var j = 0; j < 7; j++) {
-      cases = cases.concat(month_sheet.getRange(week_indexes[i] + 1, (7*j+5), week_indexes[i+1] - week_indexes[i], 4).getValues());
+  //Unwrap word counts extract word count for user
+  word_counts = [].concat.apply([], word_counts);
+  var word_count = word_counts[word_counts.indexOf(user) + 1];
+
+  //Unwrap cases and map proofreader names to title case
+  var cases = [].concat.apply([], cases.map(
+                        function (entry) {
+                          var proofreader_letters = entry[2].trim().split("");
+                          if (proofreader_letters.length > 0) {
+                            var proofreader = proofreader_letters[0].toUpperCase() + proofreader_letters.slice(1, proofreader_letters.length).join("").toLowerCase();
+                            return [entry[0], entry[1], proofreader, entry[3]];
+                          }
+                        }));
+  
+  //Add assigned cases for user (use regex to check case ID)
+  var assigned_cases = [];
+  var indexes = getAllIndexes(cases, user);
+  var regex = new RegExp('^O[0-9]{6}$')
+  for (var i = 0; i < indexes.length; i++) {
+    if (regex.test(cases[indexes[i] - 2].toString().trim())) {
+      assigned_cases.push([cases[indexes[i] - 2].toString().trim(), cases[indexes[i] + 1]]);
     }
   }
   
-  //Find the index of tomorrows date if the current month is selected
-  var date_index = 0;
-  if (today_month == month) {
-    var found = false;
-    while (!found && date_index < cases.length) {
-      if (cases[date_index][0] == today_date+1) {
-        found = true;
-      }
-      else {
-        date_index += 1;
-      }
-    }
+  if (assigned_cases.length > 0) {
+    return [assigned_cases, word_count];
   }
   else {
-    date_index = cases.length;
-  }
-  
-  var assigned_cases = {};
-  
-  var day_indexes = [];
-  for (i = 0; i < week_indexes.length - 1; i++) {
-    for (j = 0; j < 7; j++) {
-      day_indexes.push(j*(week_indexes[i + 1]-week_indexes[i]) + 7*(week_indexes[i] - week_indexes[0]));
-    }
-  }
-  
-  var day = "";
-  
-  //Use regular expression to match case numbers (e.g., O001881 or O001881-1)
-  var regex = new RegExp('^O[0-9]{5}.*[0-9]$')
-  for (var i = 0; i < date_index; i++) {
-    if (day_indexes.indexOf(i) != -1) {
-      day = cases[i][0];
-    }
-    Logger.log(cases[i][0])
-    if (regex.test(cases[i][0].toString().trim())&&(typeof cases[i][2] == "string")) {
-      
-      //Convert name to title case
-      var proofreader_letters = cases[i][2].trim().split("");
-      var proofreader = proofreader_letters[0].toUpperCase() + proofreader_letters.slice(1, proofreader_letters.length).join("").toLowerCase();
-      
-      //Create case dictionary
-      if (Object.keys(assigned_cases).indexOf(proofreader) == -1) {
-        assigned_cases[proofreader] = {};
-        assigned_cases[proofreader][day] = [[cases[i][0].trim(), cases[i][3]]]
-      }
-      else {
-        if (Object.keys(assigned_cases[proofreader]).indexOf(day.toString()) == -1) {
-          assigned_cases[proofreader][day] = [[cases[i][0].trim(), cases[i][3]]]
-        }
-        else {
-          assigned_cases[proofreader][day].push([cases[i][0].trim(), cases[i][3]]);
-        }
-      }
-    }
-  }
-  
-  if (Object.keys(assigned_cases).indexOf(user) != -1) {
-    return [assigned_cases[user], week_indexes];
-  }
-  else {
-    return [false, week_indexes];
+    return false;
   }
 }
 
-
-function getOutstanding(cases) {
-  //Get list of cases with incomplete feedback for the selected month
-  
-  var TPR_Feedback_sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PR Feedback");
-  var complete = TPR_Feedback_sheet.getRange(2, 3, TPR_Feedback_sheet.getLastRow() - 1, 1).getValues();
-  var completed_cases = [];
-  for (i = 0; i < complete.length; i++) {
-    completed_cases.push(complete[i][0].slice(0, 7));
-  }
-  
-  var all_cases = [];
-  for (var i = 0; i < Object.keys(cases).length; i++) {
-    var day = Object.keys(cases)[i];
-    all_cases = all_cases.concat(cases[day]);
-  }
-  
-  var incomplete_cases = []
-  for (i = 0; i < all_cases.length; i++) {
-    if (completed_cases.indexOf(all_cases[i][0]) == -1) {
-      incomplete_cases.push(all_cases[i]);
-    }
-  }
-  
-  return incomplete_cases
-}
-
-function getFeedback(proofreaders, editors) {
-  if (typeof editors === "undefined") {
-    editors = [];
-  }
+function getFeedback() {
   
   var users = getUsers();
   var user =  users[Session.getActiveUser().getEmail()];
-  proofreaders = [user]
   //Extracts the submitted feedback for the users in the list
   
   var PR_feedback_sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PR Feedback");
   var all_feedback = PR_feedback_sheet.getRange(2, 2, PR_feedback_sheet.getLastRow(), 12).getValues();
   all_feedback = [].concat.apply([], all_feedback);
-  var indexes = []
-  for (var i = 0; i < proofreaders.length; i++) {
-    indexes = indexes.concat(getAllIndexes(all_feedback, proofreaders[i]))
-  }
-  indexes = indexes.sort(function(a, b) {return a-b});
+  var indexes = getAllIndexes(all_feedback, user);
   var feedback = []
   for (var i = 0; i < indexes.length; i++) {
     var entry = all_feedback.slice(indexes[i] + 1, indexes[i] + 2)
@@ -258,14 +176,7 @@ function getFeedback(proofreaders, editors) {
                 .concat(all_feedback.slice(indexes[i] + 2, indexes[i] + 3))
                 .concat(all_feedback.slice(indexes[i] + 4, indexes[i] + 11));
     entry = entry.map( function (x) {return x.toString()} );
-    if (editors.length > 0) {
-      if (editors.indexOf(entry[1]) != -1) {
-        feedback.push(entry);
-      }
-    }
-    else {
-      feedback.push(entry);
-    }
+    feedback.push(entry);
   }
   Logger.log(feedback.reverse())
   return feedback;
@@ -277,14 +188,13 @@ function getFeedbackCase(caseId) {
   var users = getUsers();
   var user =  users[Session.getActiveUser().getEmail()];
   
-  var cases = getFeedback([user]);
+  var cases = getFeedback();
   cases = [].concat.apply([], cases);
   var index = cases.indexOf(caseId);
   if (index != -1) {
     return cases.slice(index, index + 10)
   }
 }
-
 
 function submitFeedback(values) {
   
@@ -308,9 +218,6 @@ function submitFeedback(values) {
   PR_feedback_sheet.getRange(PR_feedback_sheet.getLastRow() + 1, 1, 1, values.length).setValues([values]);
 }
 
-
-
-
 function getUsers() {
   // Creates a dictionary of users' names and email addresses (e.g., users = {"adamhuang@wallace.tw": "Adam", ...})
   
@@ -326,43 +233,9 @@ function getUsers() {
 
 
 
-
-
-
-function include(filename) {
-  //Adds stylesheet and javascript to Index.html
-  
-  return HtmlService.createHtmlOutputFromFile(filename)
-      .getContent();
-}
-
-function pad(n) {
-    return (n < 10) ? ("0" + n) : n;
-}
-
-function getAllIndexes(arr, val) {
-    var indexes = [], i = -1;
-    while ((i = arr.indexOf(val, i+1)) != -1){
-        indexes.push(i);
-    }
-    return indexes;
-}
-
-
-function getWeekNo(date) {
-  
-  var day = date.getDate()
-  
-  //get weekend date
-  day += (date.getDay() == 0 ? 0 : 7 - date.getDay());
-  
-  return Math.ceil(parseFloat(day) / 7)
-}
-
-
 //Add New Month
-///////////////
-
+//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
 
 function makeMonth() {
   var ui = SpreadsheetApp.getUi();
@@ -461,6 +334,43 @@ function setDates(month, sheet) {
   }
 }
 
+
+
+//Auxiliary functions
+//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+
+function include(filename) {
+  //Adds stylesheet and javascript to Index.html
+  
+  return HtmlService.createHtmlOutputFromFile(filename)
+      .getContent();
+}
+
+function pad(n) {
+  //Adds a leading zero to single digit numbers
+  return (n < 10) ? ("0" + n) : n;
+}
+
+function getAllIndexes(arr, val) {
+  //Returns all indices of a value (val) in a 1D array (arr)
+  var indexes = [], i = -1;
+  while ((i = arr.indexOf(val, i+1)) != -1){
+    indexes.push(i);
+  }
+  return indexes;
+}
+
+function getWeekNo(date) {
+  //Returns the week number in the month for the specified date
+  //Weeks are defined as Mon -- Sun
+  var day = date.getDate()
+  day += (date.getDay() == 0 ? 0 : 7 - date.getDay());
+  
+  return Math.ceil(parseFloat(day) / 7)
+}
+
 function daysInMonth (month, year) {
-    return new Date(year, month, 0).getDate();
+  //Returns the number of days in the month for the specified year
+  return new Date(year, month, 0).getDate();
 }

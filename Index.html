@@ -14,15 +14,6 @@
     <div id="content"> 
     
       <h1>Welcome <?= user ?></h1>
-        <p>Feedback is due for the following cases for <?= month ?>:</p>
-        <? if (all_cases != []) { ?>
-          <? var incomplete_cases = getOutstanding(all_cases); ?>
-          <p>
-          <? for (var i = 0; i < incomplete_cases.length; i++) { ?>
-            <?= incomplete_cases[i][0] ?><br>
-          <? } ?>
-          </p>
-        <? } ?>
         <form name="case_selector">
           Select Case ID<br>
           <select name="select1" onChange="addExistingFeedback(<?= month_year ?>)" required>
