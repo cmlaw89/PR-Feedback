@@ -1,0 +1,174 @@
+<script>
+  function getFeedback(user, month_year, user_word_count, date, repeat) {
+    //Extracts the the data inserted into the form and adds it to database using the submitFeedback function (Code.gs)
+  
+    var dropdown = document.querySelector("form").select1;
+    var selectedIndex = dropdown.selectedIndex;
+    var selectedCase = dropdown.options[selectedIndex].value.split(",")[0];
+    var selectedEditor = dropdown.options[selectedIndex].value.split(",")[1];
+    var today = new Date();
+    var time = document.getElementById("time_input").value;
+    var content = document.getElementById("content_input").value;
+    var grammar = document.getElementById("grammar_input").value;
+    var mechanics = document.getElementById("mechanics_input").value;
+    var adherence = document.getElementById("adherence_input").value;
+    var language = document.getElementById("language_input").value;process
+    var process = document.getElementById("process_input").value;    
+    var comments = document.getElementById("comments_input").value.toString();
+
+    
+    //Form validation
+    //Send is set to false if any validation condition is not staisfied
+    //////////////////////////////////////////////////////////////////////////////////////////
+    
+    var send = true;
+    
+    if (selectedCase == "") {
+      document.getElementById("case_val").innerHTML = "Please select the case number";
+      send = false;
+    }
+    else {
+      document.getElementById("case_val").innerHTML = "";
+    }
+    
+    if (!(/[0-9]+/g.test(time))) {
+      document.getElementById("time_val").innerHTML = "Please insert a number";
+      send = false;
+    }
+    else {
+      document.getElementById("time_val").innerHTML = "";
+    }
+    
+    if (['1', '1.5', '2', '2.5', '3'].indexOf(content) == -1) {
+      document.getElementById("content_val").innerHTML = "Please insert 1, 1.5, 2, 2.5, or 3";
+      send = false;
+    }
+    else {
+      document.getElementById("content_val").innerHTML = "";
+    }
+    
+    if (['1', '1.5', '2', '2.5', '3'].indexOf(grammar) == -1) {
+      document.getElementById("grammar_val").innerHTML = "Please insert 1, 1.5, 2, 2.5, or 3";
+      send = false;
+    }
+    else {
+      document.getElementById("grammar_val").innerHTML = "";
+    }
+    
+    if (['1', '1.5', '2', '2.5', '3'].indexOf(mechanics) == -1) {
+      document.getElementById("mechanics_val").innerHTML = "Please insert 1, 1.5, 2, 2.5, or 3";
+      send = false;
+    }
+    else {
+      document.getElementById("mechanics_val").innerHTML = "";
+    }
+    
+    if (['1', '1.5', '2', '2.5', '3'].indexOf(adherence) == -1) {
+      document.getElementById("adherence_val").innerHTML = "Please insert 1, 1.5, 2, 2.5, or 3";
+      send = false;
+    }
+    else {
+      document.getElementById("adherence_val").innerHTML = "";
+    }
+    
+    if (['1', '1.5', '2', '2.5', '3'].indexOf(language) == -1) {
+      document.getElementById("language_val").innerHTML = "Please insert 1, 1.5, 2, 2.5, or 3";
+      send = false;
+    }
+    else {
+      document.getElementById("language_val").innerHTML = "";
+    }
+    
+    if (['1', '1.5', '2', '2.5', '3'].indexOf(process) == -1) {
+      document.getElementById("process_val").innerHTML = "Please insert 1, 1.5, 2, 2.5, or 3";
+      send = false;
+    }
+    else {
+      document.getElementById("process_val").innerHTML = "";
+    }
+    
+    if (comments == "") {
+      document.getElementById("comments_val").innerHTML = "Please add comments";
+      send = false;
+    }
+    else {
+      document.getElementById("comments_val").innerHTML = "";
+    }
+    /////////////////////////////////////////////////////////////////////////////////
+    
+    
+    //Check if validation conditions are satisfied
+    if (send) {
+      //Disable send buttons
+      document.getElementById("submit_and_repeat_button").disabled = true;
+      document.getElementById("submit_and_close_button").disabled = true;
+      //Check if close or repeat button is chosen
+      if (repeat) {
+        google.script.run
+          .withSuccessHandler(google.script.run.prFeedback(date))
+          .submitFeedback([today.toString(), user, selectedCase + month_year, 
+                  time, user_word_count, content, grammar, mechanics, adherence, language, process, comments, selectedEditor]);
+      }
+      else {
+        google.script.run
+          .withSuccessHandler(google.script.host.close)
+          .submitFeedback([today.toString(), user, selectedCase + month_year, 
+                  time, user_word_count, content, grammar, mechanics, adherence, language, process, comments, selectedEditor]);
+      }
+    }
+    else {
+      document.getElementById("submit_and_repeat_button").disabled = false;
+      document.getElementById("submit_and_close_button").disabled = false;
+    }
+  }
+  
+  /////////////////////////////////////////////////////////////////////////////////////
+  
+  function auto_grow(element) {
+    //auto adujst the hieght of a textarea (comment box)
+  
+    element.style.height = "5px";
+    element.style.height = (element.scrollHeight)+"px";
+  }
+  
+  
+  //Two functions to auto fill the form for cases that already have feedback submitted
+  //////////////////////////////////////////////////////////////////////////////////////
+  
+  function addExistingFeedback(month_year){
+    //Extracts the feedback for the selected case from the database
+    var dropdown = document.querySelector("form").select1;
+    var selectedIndex = dropdown.selectedIndex;
+    var selectedCase = dropdown.options[selectedIndex].value.split(",")[0];
+    console.log(selectedCase)
+    google.script.run
+      .withSuccessHandler(onSuccess)
+      .getFeedbackCase(selectedCase + month_year);
+  }
+  
+  function onSuccess(my_array) {
+    //Updates the feedback input fields with the existing values
+    if (my_array) {
+      document.getElementById("time_input").value = my_array[2];
+      document.getElementById("content_input").value = my_array[3];
+      document.getElementById("grammar_input").value = my_array[4];
+      document.getElementById("mechanics_input").value = my_array[5];
+      document.getElementById("adherence_input").value = my_array[6];
+      document.getElementById("language_input").value = my_array[7];
+      document.getElementById("process_input").value = my_array[8];
+      document.getElementById("comments_input").value = my_array[9];
+    }
+    else {
+      document.getElementById("time_input").value = "";
+      document.getElementById("content_input").value = "";
+      document.getElementById("grammar_input").value = "";
+      document.getElementById("mechanics_input").value = "";
+      document.getElementById("adherence_input").value = "";
+      document.getElementById("language_input").value = "";
+      document.getElementById("process_input").value = "";
+      document.getElementById("comments_input").value = "";
+    }
+  }
+
+  
+</script>

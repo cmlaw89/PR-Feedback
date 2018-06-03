@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet'  type='text/css'>
+    
+    <?!= include('Stylesheet'); ?>
+    
+    <?!= include('Javascript'); ?>
+    
+  </head>
+  <body>
+  
+    <div id="content"> 
+    
+      <h1>Welcome <?= user ?></h1>
+        <p>Feedback is due for the following cases for <?= month ?>:</p>
+        <? if (all_cases != []) { ?>
+          <? var incomplete_cases = getOutstanding(all_cases); ?>
+          <p>
+          <? for (var i = 0; i < incomplete_cases.length; i++) { ?>
+            <?= incomplete_cases[i][0] ?><br>
+          <? } ?>
+          </p>
+        <? } ?>
+        <form name="case_selector">
+          Select Case ID<br>
+          <select name="select1" onChange="addExistingFeedback(<?= month_year ?>)" required>
+            <option value="" disabled selected hidden>Choose</option>
+            <? for (var i = 0; i < cases.length; i++) { ?>
+              <option value="<?= cases[i] ?>"><?= cases[i][0]; ?></option>
+            <? } ?>
+          </select>
+        <div id="case_val"></div> 
+        </form>
+        <form>
+          <div id="pr_val"></div>
+          <br>
+          <h2>Time:</h2>
+          <input id="time_input" placeholder="Your answer"/><br>
+          <div id="time_val"></div>
+          <h2>Content:</h2>
+          <input id="content_input" placeholder="Your answer"/><br>
+          <div id="content_val"></div>
+          <h2>Grammar:</h2>
+          <input id="grammar_input" placeholder="Your answer"/><br>
+          <div id="grammar_val"></div>
+          <h2>Mechanics:</h2>
+          <input id="mechanics_input" placeholder="Your answer"/><br>
+          <div id="mechanics_val"></div>
+          <h2>Adherence:</h2>
+          <input id="adherence_input" placeholder="Your answer"/><br>
+          <div id="adherence_val"></div>
+          <h2>Language:</h2>
+          <input id="language_input" placeholder="Your answer"/><br>
+          <div id="language_val"></div>
+          <h2>Process:</h2>
+          <input id="process_input" placeholder="Your answer"/><br>
+          <div id="process_val"></div>
+          <h2>Comments:</h2>
+          <textarea id="comments_input" placeholder="Your answer" onkeyup="auto_grow(this)"></textarea><br>
+          <div id="comments_val"></div>
+        </form>
+
+        <button id="submit_and_repeat_button" onclick="getFeedback(<?= user ?>, <?= month_year ?>, <?= user_word_count ?>, <?= date ?>, true)">Save and Add Another</button>
+        <button id="submit_and_close_button" onclick="getFeedback(<?= user ?>, <?= month_year ?>, <?= user_word_count ?>, <?= date ?>, false)">Save and Close</button>
+      </div>
+   </body>
+</html>
+
+
