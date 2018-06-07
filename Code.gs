@@ -134,7 +134,7 @@ function getCases(user, date) {
   //Unwrap cases and map proofreader names to title case
   var cases = [].concat.apply([], cases.map(
                         function (entry) {
-                          var proofreader_letters = entry[2].trim().split("");
+                          var proofreader_letters = entry[2].toString().trim().split("");
                           if (proofreader_letters.length > 0) {
                             var proofreader = proofreader_letters[0].toUpperCase() + proofreader_letters.slice(1, proofreader_letters.length).join("").toLowerCase();
                             return [entry[0], entry[1], proofreader, entry[3]];
@@ -171,14 +171,15 @@ function getFeedback() {
   var indexes = getAllIndexes(all_feedback, user);
   var feedback = []
   for (var i = 0; i < indexes.length; i++) {
-    var entry = all_feedback.slice(indexes[i] + 1, indexes[i] + 2)
-                .concat(all_feedback.slice(indexes[i] + 11, indexes[i] + 12))
-                .concat(all_feedback.slice(indexes[i] + 2, indexes[i] + 3))
-                .concat(all_feedback.slice(indexes[i] + 4, indexes[i] + 11));
-    entry = entry.map( function (x) {return x.toString()} );
-    feedback.push(entry);
+    if (indexes[i] % 12 == 0) {
+      var entry = all_feedback.slice(indexes[i] + 1, indexes[i] + 2)
+                  .concat(all_feedback.slice(indexes[i] + 11, indexes[i] + 12))
+                  .concat(all_feedback.slice(indexes[i] + 2, indexes[i] + 3))
+                  .concat(all_feedback.slice(indexes[i] + 4, indexes[i] + 11));
+      entry = entry.map( function (x) {return x.toString()} );
+      feedback.push(entry);
+    }
   }
-  Logger.log(feedback.reverse())
   return feedback;
 }
 

@@ -31,7 +31,7 @@
       document.getElementById("case_val").innerHTML = "";
     }
     
-    if (!(/[0-9]+/g.test(time))) {
+    if (!(/^[0-9]+$/g.test(time))) {
       document.getElementById("time_val").innerHTML = "Please insert a number";
       send = false;
     }
