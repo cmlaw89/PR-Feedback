@@ -140,7 +140,6 @@
     var dropdown = document.querySelector("form").select1;
     var selectedIndex = dropdown.selectedIndex;
     var selectedCase = dropdown.options[selectedIndex].value.split(",")[0];
-    console.log(selectedCase)
     google.script.run
       .withSuccessHandler(onSuccess)
       .getFeedbackCase(selectedCase + month_year);

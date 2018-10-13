@@ -33,7 +33,7 @@
     document.getElementById("clickMe").disabled = true;
     google.script.run
         .withSuccessHandler(google.script.host.close)
-        .prFeedback($("#datepicker").datepicker( 'getDate' ).toString());
+        .prFeedback($("#datepicker").datepicker( 'getDate' ).toString(), <?= user ?>);
   }
   </script>
 </head>

@@ -10,7 +10,11 @@ function onOpen() {
 }
 
 function openDatePicker() {
-  var html = HtmlService.createTemplateFromFile('Date_Picker').evaluate().setHeight(300).setWidth(300);
+  var users = getUsers();
+  var user =  users[Session.getActiveUser().getEmail().toLowerCase()];
+  var html = HtmlService.createTemplateFromFile('Date_Picker')
+  html.user = user;
+  html = html.evaluate().setHeight(300).setWidth(300);
   SpreadsheetApp.getUi().showModalDialog(html, "Please select the feedback date.");
 }
 
@@ -34,7 +38,7 @@ function viewFeedback() {
   SpreadsheetApp.getUi().showModalDialog(html, "Submitted Feedback")
 }
 
-function prFeedback(date) {
+function prFeedback(date, user) {
   //Opens the feedback sidebar
   
   date = new Date(date)
@@ -53,8 +57,6 @@ function prFeedback(date) {
                 10: "November",
                 11: "December"}
   
-  var users = getUsers();
-  var user =  users[Session.getActiveUser().getEmail()];
 
   var extracted_data = getCases(user, date);
   if (extracted_data) {
@@ -162,7 +164,7 @@ function getCases(user, date) {
 function getFeedback() {
   
   var users = getUsers();
-  var user =  users[Session.getActiveUser().getEmail()];
+  var user =  users[Session.getActiveUser().getEmail().toLowerCase()];
   //Extracts the submitted feedback for the users in the list
   
   var PR_feedback_sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("PR Feedback");
@@ -180,14 +182,14 @@ function getFeedback() {
       feedback.push(entry);
     }
   }
-  return feedback;
+  return feedback.reverse();
 }
 
 function getFeedbackCase(caseId) {
   //Returns the feedback that was submitted for the given case ID
   
   var users = getUsers();
-  var user =  users[Session.getActiveUser().getEmail()];
+  var user =  users[Session.getActiveUser().getEmail().toLowerCase()];
   
   var cases = getFeedback();
   cases = [].concat.apply([], cases);
@@ -226,7 +228,7 @@ function getUsers() {
   var emails = list_sheet.getRange(3, 1, list_sheet.getLastRow()-2, 2).getValues();
   var users = {};
   for (var i = 0; i < emails.length; i++) {
-    users[emails[i][1]] = emails[i][0];
+    users[emails[i][1].toLowerCase()] = emails[i][0];
   }
   
   return users
