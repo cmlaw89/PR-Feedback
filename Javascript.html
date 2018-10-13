@@ -105,7 +105,7 @@
       //Check if close or repeat button is chosen
       if (repeat) {
         google.script.run
-          .withSuccessHandler(google.script.run.prFeedback(date))
+          .withSuccessHandler(google.script.run.prFeedback(date, user))
           .submitFeedback([today.toString(), user, selectedCase + month_year, 
                   time, user_word_count, content, grammar, mechanics, adherence, language, process, comments, selectedEditor]);
       }
